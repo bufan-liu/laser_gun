@@ -6,12 +6,15 @@
 #include <stdio.h>
 #include "freertos/task.h"
 #include "freertos/semphr.h"
+#include "msg_handle.h"
 
 static const char *TAG = "gun_infrared";
 
-#define RMT_TX_GPIO_NUM         48
-#define RMT_TX_CHANNEL          RMT_CHANNEL_0
-#define RMT_RX_GPIO_NUM         45
+#define RMT_TX1_GPIO_NUM        39
+#define RMT_TX1_CHANNEL         RMT_CHANNEL_0
+#define RMT_TX2_GPIO_NUM        38
+#define RMT_TX2_CHANNEL         RMT_CHANNEL_1
+#define RMT_RX_GPIO_NUM         1
 #define RMT_RX_CHANNEL          RMT_CHANNEL_4
 
 #define RMT_CLK_DIV             100
@@ -140,10 +143,15 @@ static void gun_ir_tx_config(ir_config_t *sp_ir_config)
     ESP_LOGI(TAG, "install rmt driver");
 }
 
-void gun_ir_tx_task(void)
+void gun_ir_tx_task(uint8_t channel)
 {
+    app_to_gun_data_t *data;
     rmt_item32_t *item;
     uint8_t item_num = NEC_DATA_ITEM_NUM;
+
+    data = get_app_to_gun_data();
+    s_ir_tx_data.user_id = data->user_code & 0xff;
+    s_ir_tx_data.war_situation = (data->user_code >> 8) & 0xff;
 
     //获取互斥锁
     if(xSemaphoreTake(sp_rmt_mutex, 0) == pdTRUE) {
@@ -151,8 +159,13 @@ void gun_ir_tx_task(void)
         memset(item, 0, sizeof(rmt_item32_t) * item_num);
         
         nec_buid_item(item, s_ir_tx_data.user_id, s_ir_tx_data.war_situation);
-        rmt_write_items(RMT_TX_CHANNEL, item, item_num, true);      //将item写入通道对应的RAM并进入阻塞
-        rmt_wait_tx_done(RMT_TX_CHANNEL, portMAX_DELAY);            //等待发送完成
+        if(channel == 0) {
+            rmt_write_items(RMT_TX1_CHANNEL, item, item_num, true);      //将item写入通道对应的RAM并进入阻塞
+            rmt_wait_tx_done(RMT_TX1_CHANNEL, portMAX_DELAY);            //等待发送完成
+        } else if(channel == 1) {
+            rmt_write_items(RMT_TX2_CHANNEL, item, item_num, true);      //将item写入通道对应的RAM并进入阻塞
+            rmt_wait_tx_done(RMT_TX2_CHANNEL, portMAX_DELAY);            //等待发送完成
+        }
 
         ESP_LOGI(TAG, "--rmt send item finish--");
         free(item);
@@ -165,24 +178,26 @@ void gun_ir_tx_task(void)
 
 void gun_ir_tx_init(void)
 {
-    ir_config_t tx_config = {
-        .channel = RMT_TX_CHANNEL,
-        .gpio_num = RMT_TX_GPIO_NUM,
+    ir_config_t tx1_config = {
+        .channel = RMT_TX1_CHANNEL,
+        .gpio_num = RMT_TX1_GPIO_NUM,
         .mode = RMT_MODE_TX,
     };
 
-    gun_ir_tx_config(&tx_config);
-    ESP_LOGI(TAG, "----init rmt tx----");
+    ir_config_t tx2_config = {
+        .channel = RMT_TX2_CHANNEL,
+        .gpio_num = RMT_TX2_GPIO_NUM,
+        .mode = RMT_MODE_TX,
+    };
+
+    gun_ir_tx_config(&tx1_config);
+    gun_ir_tx_config(&tx2_config);
+    ESP_LOGI(TAG, "----init rmt tx1 tx2----");
 
     sp_rmt_mutex = xSemaphoreCreateBinary();
     if (sp_rmt_mutex != NULL) {
 		xSemaphoreGive(sp_rmt_mutex); 
 	}
-
-    //测试 填充数据
-    //实际数据由蓝牙下发
-    s_ir_tx_data.user_id = 0x01;
-    s_ir_tx_data.war_situation = 0x02;
 }
 /*--------------------------------------------------------------------------------------------------------------------------------*/
 
@@ -243,7 +258,7 @@ void gun_ir_rx_task(void *arg)
     rmt_rx_start(RMT_RX_CHANNEL, true);
     for(; ;)
     {
-        rmt_item32_t *item = (rmt_item32_t *)xRingbufferReceive(rb, &rx_size, portMAX_DELAY);
+        rmt_item32_t *item = (rmt_item32_t *)xRingbufferReceive(rb, &rx_size, portMAX_DELAY);   //pdMS_TO_TICKS(200)
 
         if(item != NULL) {
             if(rx_size == (NEC_DATA_ITEM_NUM * sizeof(rmt_item32_t))) {
@@ -268,7 +283,7 @@ static void gun_ir_rx_config(ir_config_t *sp_ir_config)
         .clk_div = RMT_CLK_DIV,
         .rx_config = {
            .filter_en = true,           //开启滤波
-           .filter_ticks_thresh = 100,  //滤波阈值 250us以下的信号不接受 
+           .filter_ticks_thresh = 240,  //滤波阈值 滤波信号宽度 300us以下的信号不接受 
            .idle_threshold = (RMT_ITEM32_TIMEOUT_US / 10) * RMT_TICK_10_US
         }
     };

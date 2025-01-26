@@ -5,9 +5,9 @@
 #include "gun_adc.h"
 #include "freertos/semphr.h"
 
-#define GUN_BAT_CHARGE_PIN              GPIO_NUM_5
-#define GUN_BAT_CHRG_PIN                GPIO_NUM_6
-#define GUN_BAT_READ_CHARGE_PIN         gpio_get_level(GUN_BAT_CHARGE_PIN)
+#define GUN_BAT_USB_PIN              	GPIO_NUM_47
+#define GUN_BAT_CHRG_PIN                GPIO_NUM_48
+#define GUN_BAT_READ_USB_PIN         	gpio_get_level(GUN_BAT_USB_PIN)
 #define GUN_BAT_READ_CHRG_PIN           gpio_get_level(GUN_BAT_CHRG_PIN)
 #define GUN_VOL_PERIOD				    120	//120*500ms
 
@@ -32,16 +32,16 @@ static void gun_charge_gpio_init(void)
 		.pull_down_en = GPIO_PULLDOWN_DISABLE,
         .pull_up_en = GPIO_PULLUP_DISABLE,
 	};
-	chg_config.pin_bit_mask = 1ULL << GUN_BAT_CHARGE_PIN;
+	chg_config.pin_bit_mask = 1ULL << GUN_BAT_USB_PIN;
     gpio_config(&chg_config);
 
-	chg_config.pin_bit_mask = 1ULL << GUN_BAT_CHARGE_PIN;
+	chg_config.pin_bit_mask = 1ULL << GUN_BAT_CHRG_PIN;
 	gpio_config(&chg_config);
 }
 
-static int gun_get_charge_gpio_val(void)
+static int gun_get_usb_gpio_val(void)
 {
-	return GUN_BAT_READ_CHARGE_PIN;
+	return GUN_BAT_READ_USB_PIN;
 }
 
 static int gun_get_chrg_gpio_val(void)
@@ -53,13 +53,13 @@ uint8_t gun_read_charge_status(void)
 {
 	uint8_t reg_value, chg_stat;
 
-	reg_value = gun_get_charge_gpio_val();
-	gun_charge_val.gun_charing = gun_get_chrg_gpio_val();
+	reg_value = gun_get_usb_gpio_val();
+	gun_charge_val.gun_charing = gun_get_chrg_gpio_val();	//0 未充满 1 充满
 	
 	if(reg_value)
-		chg_stat = 1;
+		chg_stat = 1;	//usb连接
 	else
-		chg_stat = 0;
+		chg_stat = 0;	//usb未连接
 
 	return chg_stat;
 }

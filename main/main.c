@@ -7,8 +7,9 @@
 #include "gun_presskey.h"
 #include "gun_ws2812.h"
 #include "gun_infrared.h"
+#include "gun_gatt_server.h"
+#include "gun_ble_app.h"
 
-#define RMT_TX_ENABLE
 void app_main(void)
 {
     esp_err_t ret = nvs_flash_init();
@@ -19,6 +20,10 @@ void app_main(void)
     }
     ESP_ERROR_CHECK(ret);
 
+    //初始化蓝牙
+    gun_ble_init();
+    gun_ble_app_init();
+    
     //初始化按键
     gun_presskey_init();
     gun_presskey_config();
@@ -26,13 +31,10 @@ void app_main(void)
     gun_adc_init();
     //初始化充电task
     gun_charge_init();
-#ifdef RMT_TX_ENABLE
     //初始化红外发送
-    //gun_ir_tx_init();
-#else
+     gun_ir_tx_init();
     //初始化红外接收
     gun_ir_rx_init();
-#endif
     //初始化ws2812
     gun_ws2812_init();
 }

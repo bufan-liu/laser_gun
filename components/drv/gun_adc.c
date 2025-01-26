@@ -8,14 +8,14 @@
 static const char *TAG = "gun_adc";
 
 #define NO_OF_SAMPLES       64          //Multisampling
-#define ADC_PIN             GPIO_NUM_4
+#define ADC_PIN             GPIO_NUM_17
 
 static esp_adc_cal_characteristics_t *adcChar;
 
-static const adc_unit_t unit = ADC_UNIT_1;
+static const adc_unit_t unit = ADC_UNIT_2;
 static const adc_atten_t atten = ADC_ATTEN_DB_11;
 static const adc_bits_width_t width = ADC_WIDTH_BIT_12;
-static const adc1_channel_t channel_chg = ADC1_CHANNEL_3;
+static const adc1_channel_t channel_chg = ADC2_CHANNEL_6;
 
 static const uint32_t dischg_bat[][2] = 
 {
@@ -36,9 +36,11 @@ static const uint32_t chg_bat[][2] =
 static uint32_t gun_get_chg_vol(void)
 {
     uint32_t adc_reading_chg = 0;
+    int raw_val = 0;
 
     for (int i = 0; i < NO_OF_SAMPLES; i++){
-        adc_reading_chg += adc1_get_raw(channel_chg);
+        adc2_get_raw(channel_chg, width, &raw_val);
+        adc_reading_chg += raw_val;
     }
 
     adc_reading_chg /= NO_OF_SAMPLES;
@@ -55,7 +57,7 @@ static uint32_t gun_get_dischg_bat(void)
     uint32_t vol;
 
     vol = gun_get_chg_vol();
-    vol = vol * 2;
+    vol = (vol * 3) / 2;
     ESP_LOGI(TAG, "vol = %d", vol);
 
     gun_charge_val.gun_chg_vol = vol;
@@ -82,7 +84,7 @@ static uint32_t gun_get_chg_bat(void)
     uint32_t vol;
 
     vol = gun_get_chg_vol();
-    vol = vol * 2;
+    vol = (vol * 3) / 2;
     ESP_LOGI(TAG, "vol = %d", vol);
 
     gun_charge_val.gun_chg_vol = vol;
@@ -104,10 +106,10 @@ static uint32_t gun_get_chg_bat(void)
 
 void gun_adc_init(void)
 {
-    adc1_config_width(width);
-    adc1_config_channel_atten(channel_chg, atten);
+    adc2_config_channel_atten(channel_chg, atten);
 
-    adc_vref_to_gpio(unit, ADC_PIN);
+    // adc_vref_to_gpio(unit, ADC_PIN);
+    // adc2_vref_to_gpio(ADC_PIN);
 
     adcChar = (esp_adc_cal_characteristics_t*)calloc(10, sizeof(esp_adc_cal_characteristics_t));
     esp_adc_cal_value_t val_type = esp_adc_cal_characterize(unit, 
@@ -126,24 +128,16 @@ uint32_t gun_get_bat(uint8_t chrg_state)
 {
     uint32_t bat = 0;
 
-#if 0
     //usb插入
-    if(chrg_state)
-    {
+    if(chrg_state) {
         //是否处于充电状态
         if(!gun_charge_val.gun_charing)   
             bat = gun_get_chg_bat();
         else
             bat = gun_get_dischg_bat();
-    }
-    else//usb拔出
-    {
+    } else {    //usb拔出
         bat = gun_get_dischg_bat();
     }
-
-    return bat;
-#else
-    bat = gun_get_dischg_bat();
-#endif
+    
     return bat;
 }

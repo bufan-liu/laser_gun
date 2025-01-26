@@ -14,4 +14,4 @@ idf_component_register(SRCS "gun_adc.c"
 					   INCLUDE_DIRS "button/"
 					   INCLUDE_DIRS "led/"
 
-					   PRIV_REQUIRES esp_adc_cal framework) 
+					   PRIV_REQUIRES esp_adc_cal framework ble) 

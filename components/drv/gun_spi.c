@@ -7,7 +7,8 @@
 
 static const char *TAG = "gun_spi";
 
-spi_device_handle_t spi_device;
+// spi_device_handle_t spi_device_led_body;
+// spi_device_handle_t spi_device_led_battery;
 
 // static spi_setting_t spi_setting = {
 //     .dma_channel = SPI_DMA_CH_AUTO,
@@ -35,7 +36,7 @@ void gun_spi_init(spi_setting_t *spi_setting)
     spi_bus_config_t buscfg = {
         .miso_io_num = -1,
         .mosi_io_num = spi_setting->mosi,
-        .sclk_io_num = GPIO_NUM_35,
+        .sclk_io_num = -1,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
         .max_transfer_sz = spi_setting->max_transfer_sz
@@ -50,11 +51,16 @@ void gun_spi_init(spi_setting_t *spi_setting)
         .queue_size = 1
     };      
 
-    spi_bus_initialize(spi_setting->host, &buscfg, spi_setting->dma_channel);   
-    spi_bus_add_device(spi_setting->host, &devcfg, &spi_device); 
+    if(spi_setting->host == SPI2_HOST) {
+        spi_bus_initialize(SPI2_HOST, &buscfg, spi_setting->dma_channel);
+        spi_bus_add_device(SPI2_HOST, &devcfg, &spi_setting->spi_device_led_body); 
+    } else if(spi_setting->host == SPI3_HOST) {
+        spi_bus_initialize(SPI3_HOST, &buscfg, spi_setting->dma_channel);   
+        spi_bus_add_device(SPI3_HOST, &devcfg, &spi_setting->spi_device_led_battery);
+    }
 }
 
-void gun_spi_data_queue(void *data, int lenth)
+void gun_spi_data_queue(spi_device_handle_t spi_device, void *data, int lenth)
 {
     if(data == NULL || lenth == 0)
         return;

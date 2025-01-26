@@ -15,9 +15,9 @@ typedef enum{
 }ws2812_select_color;
 
 typedef enum{
-    WS2812_EFFECT_ON = 1,
-    WS2812_EFFECT_BREATH,
-    WS2812_EFFECT_BLINK
+    WS2812_EFFECT_NONE,
+    WS2812_EFFECT_BLE_CNNENT,
+    WS2812_EFFECT_BLE_DISCONNECT
 }ws2812_effect_t;
 
 typedef struct {
@@ -33,8 +33,9 @@ typedef struct{
 }ws2812_config_t;
 
 void gun_ws2812_init(void);
-void gun_ws812_flush_data(ws2812_select_color color_index);
-void gun_ws2812_set_breath(ws2812_select_color color_index);
+void gun_ws812_flush_data(ws2812_select_color color_index, ws2812_config_t ws2812_config, spi_device_handle_t spi_device, uint8_t led_num);
+void gun_ws2812_set_breath(ws2812_select_color color_index, ws2812_config_t ws2812_config, spi_device_handle_t spi_device, uint8_t led_num);
+void gun_ws2812_set_blink(ws2812_select_color color_index, ws2812_config_t ws2812_config, spi_device_handle_t spi_device, uint8_t led_num);
 void gun_ws2812_set_pixel(ws2812_color_t color, uint8_t* buffer, uint16_t index);
 void ws2812_control_task(void* arg);
 

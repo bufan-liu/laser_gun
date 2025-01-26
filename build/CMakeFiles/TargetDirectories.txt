@@ -411,6 +411,7 @@ D:/ESP32/laser_gun/build/esp-idf/asio/CMakeFiles/list_install_components.dir
 D:/ESP32/laser_gun/build/esp-idf/asio/CMakeFiles/install.dir
 D:/ESP32/laser_gun/build/esp-idf/asio/CMakeFiles/install/local.dir
 D:/ESP32/laser_gun/build/esp-idf/asio/CMakeFiles/install/strip.dir
+D:/ESP32/laser_gun/build/esp-idf/bt/CMakeFiles/__idf_bt.dir
 D:/ESP32/laser_gun/build/esp-idf/bt/CMakeFiles/edit_cache.dir
 D:/ESP32/laser_gun/build/esp-idf/bt/CMakeFiles/rebuild_cache.dir
 D:/ESP32/laser_gun/build/esp-idf/bt/CMakeFiles/list_install_components.dir
@@ -708,3 +709,10 @@ D:/ESP32/laser_gun/build/esp-idf/drv/CMakeFiles/list_install_components.dir
 D:/ESP32/laser_gun/build/esp-idf/drv/CMakeFiles/install.dir
 D:/ESP32/laser_gun/build/esp-idf/drv/CMakeFiles/install/local.dir
 D:/ESP32/laser_gun/build/esp-idf/drv/CMakeFiles/install/strip.dir
+D:/ESP32/laser_gun/build/esp-idf/ble/CMakeFiles/__idf_ble.dir
+D:/ESP32/laser_gun/build/esp-idf/ble/CMakeFiles/edit_cache.dir
+D:/ESP32/laser_gun/build/esp-idf/ble/CMakeFiles/rebuild_cache.dir
+D:/ESP32/laser_gun/build/esp-idf/ble/CMakeFiles/list_install_components.dir
+D:/ESP32/laser_gun/build/esp-idf/ble/CMakeFiles/install.dir
+D:/ESP32/laser_gun/build/esp-idf/ble/CMakeFiles/install/local.dir
+D:/ESP32/laser_gun/build/esp-idf/ble/CMakeFiles/install/strip.dir

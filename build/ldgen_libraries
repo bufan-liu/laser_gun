@@ -36,6 +36,7 @@ D:/ESP32/laser_gun/build/esp-idf/newlib/libnewlib.a
 D:/ESP32/laser_gun/build/esp-idf/cxx/libcxx.a
 D:/ESP32/laser_gun/build/esp-idf/app_trace/libapp_trace.a
 D:/ESP32/laser_gun/build/esp-idf/asio/libasio.a
+D:/ESP32/laser_gun/build/esp-idf/bt/libbt.a
 D:/ESP32/laser_gun/build/esp-idf/cbor/libcbor.a
 D:/ESP32/laser_gun/build/esp-idf/unity/libunity.a
 D:/ESP32/laser_gun/build/esp-idf/cmock/libcmock.a
@@ -75,3 +76,4 @@ D:/ESP32/laser_gun/build/esp-idf/wifi_provisioning/libwifi_provisioning.a
 D:/ESP32/laser_gun/build/esp-idf/main/libmain.a
 D:/ESP32/laser_gun/build/esp-idf/framework/libframework.a
 D:/ESP32/laser_gun/build/esp-idf/drv/libdrv.a
+D:/ESP32/laser_gun/build/esp-idf/ble/libble.a

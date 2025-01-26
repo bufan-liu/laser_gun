@@ -126,6 +126,7 @@ if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   include("D:/ESP32/laser_gun/build/esp-idf/main/cmake_install.cmake")
   include("D:/ESP32/laser_gun/build/esp-idf/framework/cmake_install.cmake")
   include("D:/ESP32/laser_gun/build/esp-idf/drv/cmake_install.cmake")
+  include("D:/ESP32/laser_gun/build/esp-idf/ble/cmake_install.cmake")
 
 endif()
 
