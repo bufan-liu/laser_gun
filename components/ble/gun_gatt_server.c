@@ -387,6 +387,9 @@ volatile bool heart_notify_flag = false, app_notify_flag = false;
 static void heart_bag_task(void *arg)
 {
     gun_charge_t charge_info;
+    uint8_t mac[6] = {0x00};
+
+    esp_efuse_mac_get_default(mac);
 
     for(; ;)
     {
@@ -398,11 +401,11 @@ static void heart_bag_task(void *arg)
             heart_bag_data[0] = 0x68;
             heart_bag_data[1] = 0x00;
 
-            // 设置设备物理地址
-            heart_bag_data[2] = 0xff;
-            heart_bag_data[3] = 0xff;
-            heart_bag_data[4] = 0xff;
-            heart_bag_data[5] = 0xff;
+            // 设置设备物理地址 取mac地址后四位
+            heart_bag_data[2] = mac[2];
+            heart_bag_data[3] = mac[3];
+            heart_bag_data[4] = mac[4];
+            heart_bag_data[5] = mac[5];
 
             // 设置电量信息
             heart_bag_data[6] = (charge_info.gun_bat_level & 0x2f) | (charge_info.gun_charing << 7) | (charge_info.gun_charge_stat << 6);

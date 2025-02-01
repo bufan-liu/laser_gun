@@ -224,6 +224,9 @@ static bool check_if_zero_item(rmt_item32_t *item)
 }
 static void parse_items(rmt_item32_t *item)
 {
+    s_ir_rx_data.user_id = 0;
+    s_ir_rx_data.war_situation = 0;
+
     item++;     //跳过引导码
 
     for(uint8_t i = 0; i < 8; i++)

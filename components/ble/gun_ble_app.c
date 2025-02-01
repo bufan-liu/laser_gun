@@ -82,7 +82,7 @@ void gun_ble_app_task(void *arg)
 	{
 		data = get_app_to_gun_data();
 
-		if (data->user_code != 0x00) {
+		if (data->user_code != 0x00) {	//这里偷懒使用用户数据来判断 用户数据是不为0的
 			gun_la_ctr(gun_get_ctr_bit(data->output_ctr, CTR_LA));
 			gun_infrared_ctr(gun_get_ctr_bit(data->output_ctr, CTR_IR_1), 0);
 			gun_infrared_ctr(gun_get_ctr_bit(data->output_ctr, CTR_IR_2), 1);
