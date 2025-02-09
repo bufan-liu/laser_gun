@@ -144,7 +144,7 @@ void gun_ws2812_set_breath(ws2812_select_color color_index, ws2812_config_t ws28
 
 void gun_ws2812_set_blink(ws2812_select_color color_index, ws2812_config_t ws2812_config, spi_device_handle_t spi_device, uint8_t led_num)
 {
-    uint16_t buff_size = led_num*WS2812_DATA_BYTES*WS2812_DATA_BITS + WS2812_RESET_BYTE; 
+    uint16_t buff_size = led_num*WS2812_DATA_BYTES*WS2812_DATA_BITS + WS2812_RESET_BYTE*2; 
     uint16_t index_g = WS2812_RESET_BYTE;
     uint8_t green = 0, red = 0, blue = 0;
     static bool blink_flag = false;
@@ -164,7 +164,7 @@ void gun_ws2812_set_blink(ws2812_select_color color_index, ws2812_config_t ws281
     blink_flag = !blink_flag;
     uint8_t brightness = blink_flag ? 0 : 100;
 
-    for(uint8_t i = 0; i < (ws2812_config.led_nums - 1); i++) {
+    for(uint8_t i = 0; i < ws2812_config.led_nums; i++) {
         ws2812_config.grb.green = (brightness * green) / 100;
         ws2812_config.grb.red = (brightness * red) /100;
         ws2812_config.grb.blue = (brightness * blue) /100;
@@ -252,7 +252,7 @@ void gun_ws2812_init(void)
 {
     gun_spi_init(&led_body_config.spi_setting);
     gun_spi_init(&led_battery_config.spi_setting);
-    g_ws2812_bit_buffer = heap_caps_malloc(led_body_config.led_nums*WS2812_DATA_BYTES*WS2812_DATA_BITS + WS2812_RESET_BYTE, MALLOC_CAP_DMA);
+    g_ws2812_bit_buffer = heap_caps_malloc(led_body_config.led_nums*WS2812_DATA_BYTES*WS2812_DATA_BITS + WS2812_RESET_BYTE*2, MALLOC_CAP_DMA);
 
     xTaskCreate(ws2812_control_task, "ws2812_control_task", 2560, NULL, 4, NULL);
 }

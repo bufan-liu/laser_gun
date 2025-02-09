@@ -69,7 +69,6 @@ static uint8_t raw_adv_data[] = {
         /* service uuid */
         0x03, 0x03, 0xF0, 0xAB,
         /* device name */
-        //0x0f, 0x09, 'E', 'S', 'P', '_', 'G', 'A', 'T', 'T', 'S', '_', 'D','E', 'M', 'O'
         0x0A, 0x09, 'L', 'A', 'S', 'E', 'R', '_', 'G', 'U', 'N'                                                             
 };
 static uint8_t raw_scan_rsp_data[] = {
@@ -462,7 +461,7 @@ static void ble_app_task(void *arg)
             vTaskDelete(NULL);
         }
 
-        vTaskDelay(pdMS_TO_TICKS(500));
+        vTaskDelay(pdMS_TO_TICKS(300));
     }
 }
 

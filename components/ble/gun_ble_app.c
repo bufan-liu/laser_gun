@@ -48,8 +48,7 @@ static void gun_la_off(void)
 
 static void gun_la_ctr(uint8_t state)
 {
-	if (state)
-	{
+	if (state) {
 		gun_la_on();
 		feedback_msg.data[1] |= CTR_LA;
 	} else {
@@ -60,8 +59,7 @@ static void gun_la_ctr(uint8_t state)
 
 static void gun_infrared_ctr(int8_t state, uint8_t channel)
 {
-	if (state)
-	{
+	if (state) {
 		gun_ir_tx_task(channel);
 		feedback_msg.data[1] |= CTR_IR;
 	} else {
