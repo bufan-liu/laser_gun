@@ -6,8 +6,6 @@
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "gun_gatt_server.h"
-#include "freertos/queue.h"
 
 static const char *TAG = "gun_ble_app";
 
@@ -19,8 +17,7 @@ static const char *TAG = "gun_ble_app";
 #define CTR_IR_1 		0x04
 #define CTR_IR_2 		0x08
 
-extern QueueHandle_t ble_recv_msg_Queue;
-ble_notify_msg_t feedback_msg = {0};
+uint8_t control_data[4] = {0x00};
 
 static void gun_la_init(void)
 {
@@ -50,10 +47,10 @@ static void gun_la_ctr(uint8_t state)
 {
 	if (state) {
 		gun_la_on();
-		feedback_msg.data[1] |= CTR_LA;
+		control_data[1] |= CTR_LA;
 	} else {
 		gun_la_off();
-		feedback_msg.data[1] &= ~CTR_LA;
+		control_data[1] &= ~CTR_LA;
 	}
 }
 
@@ -61,9 +58,9 @@ static void gun_infrared_ctr(int8_t state, uint8_t channel)
 {
 	if (state) {
 		gun_ir_tx_task(channel);
-		feedback_msg.data[1] |= CTR_IR;
+		control_data[1] |= CTR_IR;
 	} else {
-		feedback_msg.data[1] &= ~CTR_IR;
+		control_data[1] &= ~CTR_IR;
 	}
 }
 
@@ -75,6 +72,7 @@ static uint8_t gun_get_ctr_bit(uint8_t value, uint8_t mask)
 void gun_ble_app_task(void *arg)
 {
 	app_to_gun_data_t *data;
+	uint8_t data_len = 0;
 
 	for (; ;)
 	{
@@ -85,13 +83,12 @@ void gun_ble_app_task(void *arg)
 			gun_infrared_ctr(gun_get_ctr_bit(data->output_ctr, CTR_IR_1), 0);
 			gun_infrared_ctr(gun_get_ctr_bit(data->output_ctr, CTR_IR_2), 1);
 
-			feedback_msg.handle_type = BLE_FEEDBACK_EVENT;
-			feedback_msg.data[0] = 0x68;
-			feedback_msg.data[2] = 0x00;
-			feedback_msg.data[3] = 0x16;
-			feedback_msg.len = sizeof(feedback_msg.data);
-			/*将消息发送到队列*/
-			xQueueSend(ble_recv_msg_Queue, &feedback_msg, portMAX_DELAY);
+			control_data[0] = 0x68;
+			control_data[2] = 0x00;
+			control_data[3] = 0x16;
+			data_len = sizeof(control_data);
+			
+			msg_handle_notify(BLE_CONTROL_EVENT, control_data, data_len);
 		}
 
 		vTaskDelay(500 / portTICK_PERIOD_MS);

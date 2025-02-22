@@ -32,8 +32,6 @@
 #define ADV_CONFIG_FLAG             (1 << 0)
 #define SCAN_RSP_CONFIG_FLAG        (1 << 1)
 
-#define QUEUE_LENGTH            10 
-
 typedef enum {
     BLE_CONNECTED,
     BLE_DISCONNECTED
@@ -45,8 +43,6 @@ typedef struct{
 }ble_recv_t;
 
 ble_recv_t *p_ble_recv_t = NULL;
-
-QueueHandle_t ble_recv_msg_Queue;
 
 static uint8_t adv_config_done       = 0;
 
@@ -157,19 +153,24 @@ static struct gatts_profile_inst heart_rate_profile_tab[PROFILE_NUM] = {
     },
 };
 
+static void ble_key_event_cb(ble_notify_msg_t *msg_t);
+static void ble_control_event_cb(ble_notify_msg_t *msg_t);
+static void ble_infrared_event_cb(ble_notify_msg_t *msg_t);
+
 /* Service */
 static const uint16_t GATTS_UUID_LASER_GUN              = 0xABF0;
 static const uint16_t GATTS_UUID_APP_TO_GUN             = 0xABF1;
 static const uint16_t GATTS_UUID_GUN_TO_APP_HEART       = 0xABF2;
 static const uint16_t GATTS_UUID_GUN_TO_APP_KEY         = 0xABF3;
 static const uint16_t GATTS_UUID_GUN_TO_APP_FEEDBACK    = 0xABF4;
+static const uint16_t GATTS_UUID_GUN_TO_APP_INFRARED    = 0xABF5;
 
 static const uint16_t primary_service_uuid         = ESP_GATT_UUID_PRI_SERVICE;
 static const uint16_t character_declaration_uuid   = ESP_GATT_UUID_CHAR_DECLARE;
 static const uint16_t character_client_config_uuid = ESP_GATT_UUID_CHAR_CLIENT_CONFIG;
 // static const uint8_t char_prop_read                =  ESP_GATT_CHAR_PROP_BIT_READ;
 static const uint8_t char_prop_write               = ESP_GATT_CHAR_PROP_BIT_WRITE;
-static const uint8_t char_prop_read_notify   = ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_NOTIFY;
+static const uint8_t char_prop_read_notify         = ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_NOTIFY;
 static const uint8_t char_value[1]                 = {0x00};
 static const uint8_t char_heart_bag[1]             = {0x00};
 static const uint8_t char_heart_bag_ccc[2]         = {0x00, 0x00}; 
@@ -177,6 +178,8 @@ static const uint8_t char_key[1]                   = {0x00};
 static const uint8_t char_key_ccc[2]               = {0x00, 0x00}; 
 static const uint8_t char_feedback[1]              = {0x00};
 static const uint8_t char_feedback_ccc[2]          = {0x00, 0x00};
+static const uint8_t char_infrared[1]              = {0x00};
+static const uint8_t char_infrared_ccc[2]          = {0x00, 0x00};
 
 static void gun_handle_ble_connect_status(ble_connect_status ble_status)
 {
@@ -249,18 +252,32 @@ static const esp_gatts_attr_db_t gatt_db[HRS_IDX_NB] =
         sizeof(uint16_t), sizeof(char_key_ccc), (uint8_t *)char_key_ccc}},
 
     /* Characteristic Declaration */
-    [IDX_CHAR_GUN_TO_APP_FEEDBACK]      =
+    [IDX_CHAR_GUN_TO_APP_CONTROL]      =
     {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&character_declaration_uuid, ESP_GATT_PERM_READ,
       CHAR_DECLARATION_SIZE, CHAR_DECLARATION_SIZE, (uint8_t *)&char_prop_read_notify}},
 
     /* Characteristic Value */
-    [IDX_CHAR_VAL_GUN_TO_APP_FEEDBACK]  =
+    [IDX_CHAR_VAL_GUN_TO_APP_CONTROL]  =
     {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&GATTS_UUID_GUN_TO_APP_FEEDBACK, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
       GATTS_DEMO_CHAR_VAL_LEN_MAX, sizeof(char_feedback), (uint8_t *)char_feedback}},
 
-    [IDX_CHAR_CFG_GUN_FEEDBACK] = 
+    [IDX_CHAR_CFG_GUN_CONTROL] = 
     {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&character_client_config_uuid, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
         sizeof(uint16_t), sizeof(char_feedback_ccc), (uint8_t *)char_feedback_ccc}},
+
+    /* Characteristic Declaration */
+    [IDX_CHAR_GUN_TO_APP_INFRARED]      =
+    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&character_declaration_uuid, ESP_GATT_PERM_READ,
+      CHAR_DECLARATION_SIZE, CHAR_DECLARATION_SIZE, (uint8_t *)&char_prop_read_notify}},
+
+    /* Characteristic Value */
+    [IDX_CHAR_VAL_GUN_TO_APP_INFRARED]  =
+    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&GATTS_UUID_GUN_TO_APP_INFRARED, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
+      GATTS_DEMO_CHAR_VAL_LEN_MAX, sizeof(char_infrared), (uint8_t *)char_infrared}},
+
+    [IDX_CHAR_CFG_GUN_INFRARED] = 
+    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&character_client_config_uuid, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
+        sizeof(uint16_t), sizeof(char_infrared_ccc), (uint8_t *)char_infrared_ccc}},
 };
 
 static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
@@ -383,6 +400,29 @@ static void example_exec_write_event_env(prepare_type_env_t *prepare_write_env, 
 }
 
 volatile bool heart_notify_flag = false, app_notify_flag = false;
+
+//添加用户自己定义的的事件回调函数
+static void ble_key_event_cb(ble_notify_msg_t *msg_t)
+{
+    esp_ble_gatts_set_attr_value(heart_rate_handle_table[IDX_CHAR_VAL_GUN_TO_APP_KEY], msg_t->len, msg_t->data);
+    esp_ble_gatts_send_indicate(heart_rate_profile_tab[0].gatts_if, heart_rate_profile_tab[0].conn_id,
+                                                        heart_rate_handle_table[IDX_CHAR_VAL_GUN_TO_APP_KEY], msg_t->len, msg_t->data, false);
+}
+
+static void ble_control_event_cb(ble_notify_msg_t *msg_t)
+{
+    esp_ble_gatts_set_attr_value(heart_rate_handle_table[IDX_CHAR_VAL_GUN_TO_APP_CONTROL], msg_t->len, msg_t->data);
+    esp_ble_gatts_send_indicate(heart_rate_profile_tab[0].gatts_if, heart_rate_profile_tab[0].conn_id,
+                                                        heart_rate_handle_table[IDX_CHAR_VAL_GUN_TO_APP_CONTROL], msg_t->len, msg_t->data, false);
+}
+
+static void ble_infrared_event_cb(ble_notify_msg_t *msg_t)
+{
+    esp_ble_gatts_set_attr_value(heart_rate_handle_table[IDX_CHAR_VAL_GUN_TO_APP_INFRARED], msg_t->len, msg_t->data);
+    esp_ble_gatts_send_indicate(heart_rate_profile_tab[0].gatts_if, heart_rate_profile_tab[0].conn_id,
+                                                        heart_rate_handle_table[IDX_CHAR_VAL_GUN_TO_APP_INFRARED], msg_t->len, msg_t->data, false);
+}
+//
 static void heart_bag_task(void *arg)
 {
     gun_charge_t charge_info;
@@ -435,28 +475,10 @@ static void heart_bag_task(void *arg)
 
 static void ble_app_task(void *arg)
 {
-    ble_notify_msg_t msg_t;
-
     for(; ;)
     {
         if(app_notify_flag == true) {
-            xQueueReceive(ble_recv_msg_Queue, &msg_t, portMAX_DELAY);
-
-            switch(msg_t.handle_type)
-            {
-                case BLE_KEY_EVENT:
-                     esp_ble_gatts_set_attr_value(heart_rate_handle_table[IDX_CHAR_VAL_GUN_TO_APP_KEY], msg_t.len, msg_t.data);
-                     esp_ble_gatts_send_indicate(heart_rate_profile_tab[0].gatts_if, heart_rate_profile_tab[0].conn_id,
-                                                        heart_rate_handle_table[IDX_CHAR_VAL_GUN_TO_APP_KEY], msg_t.len, msg_t.data, false);
-                     break;
-                case BLE_FEEDBACK_EVENT:
-                     esp_ble_gatts_set_attr_value(heart_rate_handle_table[IDX_CHAR_VAL_GUN_TO_APP_FEEDBACK], msg_t.len, msg_t.data);
-                     esp_ble_gatts_send_indicate(heart_rate_profile_tab[0].gatts_if, heart_rate_profile_tab[0].conn_id,
-                                                        heart_rate_handle_table[IDX_CHAR_VAL_GUN_TO_APP_FEEDBACK], msg_t.len, msg_t.data, false);
-                     break;
-            }
-            
-
+            msg_handle_task();
         } else {
             vTaskDelete(NULL);
         }
@@ -518,12 +540,6 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
                 if(heart_rate_handle_table[IDX_CHAR_VAL_APP_TO_GUN] == param->write.handle) {
                     if(param->write.len > 0) {
                         memcpy(p_ble_recv_t->recv_to_gun_data, param->write.value, param->write.len);
-                        //测试接收数据
-                        // for(uint8_t i = 0; i < param->write.len; i++)
-                        // {
-                        //     ESP_LOGI(GATTS_TABLE_TAG, "recv_data: 0x%x", p_ble_recv_t->recv_to_gun_data[i]);
-                        // }
-
                         //发送消息队列
                         msg_handle_send(&p_ble_recv_t->recv_to_gun_data);
                     }
@@ -543,19 +559,18 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
                     }
                 }
 
-                if(heart_rate_handle_table[IDX_CHAR_CFG_GUN_KEY] == param->write.handle) {
+                if(heart_rate_handle_table[IDX_CHAR_CFG_GUN_KEY] == param->write.handle || heart_rate_handle_table[IDX_CHAR_CFG_GUN_CONTROL] == param->write.handle
+                || heart_rate_handle_table[IDX_CHAR_CFG_GUN_INFRARED] == param->write.handle) {
                     descr_value = param->write.value[1] << 8 | param->write.value[0];
 
                     if (descr_value == 0x0001) {
                         ESP_LOGI(GATTS_TABLE_TAG, "notify enable");
 
-                        ble_recv_msg_Queue = xQueueCreate(QUEUE_LENGTH, sizeof(ble_notify_msg_t));
                         xTaskCreate(ble_app_task, "ble_app_task", 2048, NULL, 7, NULL);
                         app_notify_flag = true;
                     } else if (descr_value == 0x0000) {
                         ESP_LOGI(GATTS_TABLE_TAG, "notify disable");
 
-                        vQueueDelete(ble_recv_msg_Queue);
                         app_notify_flag = false;
                     }
                 }
@@ -691,6 +706,9 @@ void gun_ble_init(void)
     p_ble_recv_t = (ble_recv_t *)malloc(sizeof(ble_recv_t));
 
     gun_handle_ble_connect_status(BLE_DISCONNECTED);
+    msg_handle_register(BLE_KEY_EVENT, ble_key_event_cb);
+    msg_handle_register(BLE_CONTROL_EVENT, ble_control_event_cb);
+    msg_handle_register(BLE_INFRARED_EVENT, ble_infrared_event_cb);
     msg_handle_init();
 
     ret = esp_ble_gatts_register_callback(gatts_event_handler);

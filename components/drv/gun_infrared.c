@@ -226,6 +226,7 @@ static void parse_items(rmt_item32_t *item)
 {
     s_ir_rx_data.user_id = 0;
     s_ir_rx_data.war_situation = 0;
+    uint8_t infrared_data[] = {0x00}, data_len = 0;
 
     item++;     //跳过引导码
 
@@ -250,6 +251,14 @@ static void parse_items(rmt_item32_t *item)
     }
 
     ESP_LOGI(TAG, "-----user_id = %d, war_situation = %d-----", s_ir_rx_data.user_id, s_ir_rx_data.war_situation);
+
+    infrared_data[0] = 0x68;
+    infrared_data[1] = s_ir_rx_data.user_id;
+    infrared_data[2] = s_ir_rx_data.war_situation;
+    infrared_data[3] = 0x16;
+    data_len = sizeof(infrared_data);
+
+    msg_handle_notify(BLE_INFRARED_EVENT, infrared_data, data_len);
 }
 
 void gun_ir_rx_task(void *arg)

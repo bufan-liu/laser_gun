@@ -4,12 +4,10 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/queue.h"
-
-#include "gun_infrared.h"
 #include "gun_gatt_server.h"
 
-extern QueueHandle_t ble_recv_msg_Queue;
+#include "gun_infrared.h"
+#include "msg_handle.h"
 
 static const char *TAG = "gun_presskey";
 
@@ -76,44 +74,42 @@ static uint8_t read_botton_ultre(void)
 
 static void button_cbk(void *button)
 {
-    uint8_t event_val = 0;
+    uint8_t event_val = 0, button_data[4] = {0x00}, data_len = 0;
 	
 	event_val = get_button_event((struct Button *)button);
     uint8_t ble_cnn_status = get_gun_ble_connect_status();
 
     if (event_val == SINGLE_CLICK && ble_cnn_status == 1) {
-        ble_notify_msg_t msg = {0};
-        msg.handle_type = BLE_KEY_EVENT;
-        msg.data[0] = 0x68;
-        msg.data[2] = 0x00;
-        msg.data[3] = 0x16;
+        button_data[0] = 0x68;
+        button_data[2] = 0x00;
+        button_data[3] = 0x16;
 
         if ((struct Button *)button == &botton_shoot) {
             ESP_LOGI(TAG, "----SHOOT SINGLE_CLICK----");
-            msg.data[1] |= (1 << 6); 
+            button_data[1] |= (1 << 6); 
         } else if ((struct Button *)button == &botton_map) {
             ESP_LOGI(TAG, "----MAP SINGLE_CLICK----");
-            msg.data[1] |= (1 << 1); 
+            button_data[1] |= (1 << 1); 
         } else if ((struct Button *)button == &botton_panel) {
             ESP_LOGI(TAG, "----PANEL SINGLE_CLICK----");
-            msg.data[1] |= (1 << 7); 
+            button_data[1] |= (1 << 7); 
         } else if ((struct Button *)button == &botton_skill) {
             ESP_LOGI(TAG, "----SKILL SINGLE_CLICK----");
-            msg.data[1] |= (1 << 4); 
+            button_data[1] |= (1 << 4); 
         } else if((struct Button *)button == &botton_score) {
             ESP_LOGI(TAG, "----SCORE SINGLE_CLICK----");
-            msg.data[1] |= (1 << 2);
+            button_data[1] |= (1 << 2);
         } else if((struct Button *)button == &botton_reload) {
             ESP_LOGI(TAG, "----RELOAD SINGLE_CLICK----");
-            msg.data[1] |= (1 << 5);
+            button_data[1] |= (1 << 5);
         } else if((struct Button *)button == &botton_ultre) {
             ESP_LOGI(TAG, "----ULTRE SINGLE_CLICK----");
-            msg.data[1] |= (1 << 3);
+            button_data[1] |= (1 << 3);
         }
 
-        msg.len = sizeof(msg.data);
-        // 将消息发送到队列
-        xQueueSend(ble_recv_msg_Queue, &msg, portMAX_DELAY);
+        data_len = sizeof(button_data);
+
+        msg_handle_notify(BLE_KEY_EVENT, button_data, data_len);
     }
 
 }

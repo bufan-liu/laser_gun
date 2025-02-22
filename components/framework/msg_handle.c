@@ -10,11 +10,13 @@
 static const char *TAG = "msg_handle";
 
 #define APP_TO_GUN_DATA_SIZE    sizeof(app_to_gun_data_t)
+#define GUN_TO_APP_DATA_SIZE    sizeof(ble_notify_msg_t)
 #define QUEUE_LENGTH            10 
 
-QueueHandle_t msg_Queue;
+QueueHandle_t msg_Queue_to_gun, msg_Queue_to_app;
 static app_to_gun_data_t app_to_gun_data = {0x00};
 static esp_timer_handle_t msg_timer;
+static ble_event_callback cb[BLE_NOTIFY_MSG_MAX_NUM];
 
 app_to_gun_data_t *get_app_to_gun_data(void)
 {
@@ -25,7 +27,7 @@ static void msg_handle_timer_cb(void *arg)
 {
     app_to_gun_data_t data = {0x00};
 
-    if(xQueueReceive(msg_Queue, &data, 0) == pdTRUE) {
+    if(xQueueReceive(msg_Queue_to_gun, &data, 0) == pdTRUE) {
         memcpy(&app_to_gun_data, &data, sizeof(app_to_gun_data_t));
     } else {
         memset(&app_to_gun_data, 0x00, sizeof(app_to_gun_data_t));
@@ -38,15 +40,49 @@ void msg_handle_send(void *p_msg)
         ESP_LOGE(TAG, "p_msg is NULL");
         return;
     }
-    xQueueSend(msg_Queue, p_msg, portMAX_DELAY);
+    xQueueSend(msg_Queue_to_gun, p_msg, portMAX_DELAY);
+}
+
+void msg_handle_register(ble_type_t type, ble_event_callback event_cb)
+{
+    if(event_cb == NULL)
+        return;
+    
+    if(type >= BLE_NOTIFY_MSG_MAX_NUM)
+        return;
+
+    cb[type] = event_cb;
+}
+
+void msg_handle_notify(ble_type_t type, void *data, uint8_t len)
+{
+    if(data == NULL)
+        return;
+
+    ble_notify_msg_t notify_msg_t = {0};
+    notify_msg_t.handle_type = type;
+    notify_msg_t.len = len;
+    memcpy(notify_msg_t.data, data, len);
+    
+    xQueueSend(msg_Queue_to_app, &notify_msg_t, portMAX_DELAY);
+}
+
+void msg_handle_task(void)
+{
+    ble_notify_msg_t notify_msg_t;
+
+    if(xQueueReceive(msg_Queue_to_app, &notify_msg_t, portMAX_DELAY) == pdTRUE) {
+        cb[notify_msg_t.handle_type](&notify_msg_t);
+    }
 }
 
 void msg_handle_init(void)
 {
     ESP_LOGI(TAG, "data_msg_handle init");
 
-    msg_Queue = xQueueCreate(QUEUE_LENGTH, APP_TO_GUN_DATA_SIZE);
-    if (msg_Queue == NULL) {
+    msg_Queue_to_gun = xQueueCreate(QUEUE_LENGTH, APP_TO_GUN_DATA_SIZE);
+    msg_Queue_to_app = xQueueCreate(QUEUE_LENGTH, GUN_TO_APP_DATA_SIZE);
+    if ((msg_Queue_to_gun == NULL) && (msg_Queue_to_app == NULL)) {
         ESP_LOGE(TAG, "data_msg_handle queue create failed");
     }
 

@@ -30,6 +30,7 @@ static const char *TAG = "gun_led_body";
 #define BLINKING                 0x03
 
 uint8_t *g_ws2812_bit_buffer = NULL;
+uint8_t modle = 0x00, color = 0x00;
   
 static ws2812_config_t led_body_config = {
     .spi_setting = {
@@ -54,8 +55,8 @@ static ws2812_config_t led_battery_config = {
 };
 
 #define LDE_BODY_CONTROL_CASE(ctrl, func)                                                          \
-    if((data->led_ctr[0] == ctrl)) {                                                               \
-        func((ws2812_select_color)(data->led_ctr[1]), led_body_config, led_body_config.spi_setting.spi_device_led_body, led_body_config.led_nums);  \
+    if((modle == ctrl)) {                                                                          \
+        func((ws2812_select_color)(color), led_body_config, led_body_config.spi_setting.spi_device_led_body, led_body_config.led_nums);  \
     }
 
 static uint8_t grb_data[7][3] = {
@@ -188,6 +189,9 @@ void ws2812_control_task(void* arg)
         if(data->start == 0x68 && ble_cnn_status == 1) {
             //连接
             ws2812_effect = WS2812_EFFECT_BLE_CNNENT;
+            //存储灯效控制
+            modle = data->led_ctr[0];
+            color = data->led_ctr[1];
         } else if(ble_cnn_status == 0) {
             //未连接
             ws2812_effect = WS2812_EFFECT_BLE_DISCONNECT;
