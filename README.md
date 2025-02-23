@@ -15,4 +15,4 @@
 - OTA、语音对讲(待续...)
   
 ## 实物效果
-![gun_1]photo/1.jpg
+![gun_1](photo/1.jpg)
